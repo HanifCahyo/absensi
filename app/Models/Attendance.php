@@ -11,12 +11,13 @@ class Attendance extends Model
 
     protected $fillable = [
         'student_id',
-        'tanggal',
-        'jam',
+        'date',
+        'check_in',
+        'check_out',
         'status',
+        'reason',
     ];
 
-    // Relasi: absensi milik satu siswa
     public function student()
     {
         return $this->belongsTo(Student::class);

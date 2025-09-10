@@ -13,10 +13,15 @@ return new class extends Migration {
         Schema::create('attendances', function (Blueprint $table) {
             $table->id();
             $table->foreignId('student_id')->constrained('students')->onDelete('cascade');
-            $table->date('tanggal');
-            $table->time('jam');
-            $table->enum('status', ['Hadir', 'Terlambat', 'Izin', 'Alpha'])->default('Hadir');
+            $table->date('date');
+            $table->time('check_in')->nullable();
+            $table->time('check_out')->nullable();
+            $table->enum('status', ['Hadir', 'Terlambat', 'Izin', 'Alpha'])->default('Alpha')->nullable();
+            ;
+            $table->string('reason', 255)->nullable();
             $table->timestamps();
+
+            $table->unique(['student_id', 'date']); // tidak boleh dobel
         });
     }
 

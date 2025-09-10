@@ -12,10 +12,15 @@ return new class extends Migration {
     {
         Schema::create('students', function (Blueprint $table) {
             $table->id();
-            $table->string('nisn')->unique(); // NISN siswa unik
-            $table->string('nama');
-            $table->string('alamat')->nullable();
-            $table->string('kelas')->nullable();
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->string('nis', 50)->unique();
+            $table->foreignId('class_id')
+                ->nullable() // wajib kalau mau pakai onDelete('set null')
+                ->constrained('classes')
+                ->nullOnDelete(); // cara lebih rapi dari onDelete('set null')
+            $table->string('address')->nullable();
+            $table->string('phone', 20)->nullable();
+            $table->string('parent_contact', 20)->nullable();
             $table->string('qr_code_path')->nullable(); // Path file gambar QR Code
             $table->timestamps();
         });

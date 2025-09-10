@@ -4,6 +4,8 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Student;
+use App\Models\User;
+use App\Models\ClassModel;
 use Illuminate\Support\Facades\Storage;
 use BaconQrCode\Writer;
 use BaconQrCode\Renderer\ImageRenderer;
@@ -14,25 +16,23 @@ class StudentSeeder extends Seeder
 {
     public function run(): void
     {
+        // Ambil class yang sudah ada
+        $class10A = ClassModel::where('name', '10A')->first();
+        // $class10B = ClassModel::where('name', '10B')->first();
+        // $class11A = ClassModel::where('name', '11A')->first();
+        // $class11B = ClassModel::where('name', '11B')->first();
+        // $class12A = ClassModel::where('name', '12A')->first();
+
+        $user_id = User::where('role', 'siswa')->first()->id;
+
         $students = [
             [
-                'nisn' => '1234567890',
-                'nama' => 'Budi Santoso',
-                'alamat' => 'Jl. Merdeka No. 10',
-                'kelas' => '10A',
+                'user_id' => $user_id,
+                'nis' => '1234567890',
+                'class_id' => $class10A->id,
+                'parent_contact' => '08121234567',
             ],
-            [
-                'nisn' => '9876543210',
-                'nama' => 'Siti Aminah',
-                'alamat' => 'Jl. Diponegoro No. 5',
-                'kelas' => '10B',
-            ],
-            [
-                'nisn' => '1928374650',
-                'nama' => 'Agus Pratama',
-                'alamat' => 'Jl. Sudirman No. 7',
-                'kelas' => '11A',
-            ],
+
         ];
         foreach ($students as $s) {
             $student = Student::create($s);
@@ -44,10 +44,10 @@ class StudentSeeder extends Seeder
             );
             $writer = new Writer($renderer);
 
-            $qrCode = $writer->writeString($student->nisn);
+            $qrCode = $writer->writeString($student->nis);
 
             // Simpan ke storage
-            $path = 'qrcodes/' . $student->nisn . '.svg';
+            $path = 'qrcodes/' . $student->nis . '.svg';
             Storage::disk('public')->put($path, $qrCode);
 
             // Update kolom qr_code_path
