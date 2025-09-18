@@ -36,22 +36,22 @@ class SetAlphaAttendance extends Command
         foreach ($students as $student) {
             // Cek absensi hari ini
             $attendance = Attendance::where('student_id', $student->id)
-                ->whereDate('tanggal', $today)
+                ->whereDate('date', $today)
                 ->first();
 
             // Jika belum absen sama sekali, buat Alpha
             if (!$attendance) {
                 Attendance::create([
                     'student_id' => $student->id,
-                    'tanggal' => $today,
+                    'date' => $today,
                     'status' => 'Alpha',
-                    'keterangan' => 'Tidak hadir tanpa keterangan',
+                    'reason' => 'Tidak hadir tanpa keterangan',
                 ]);
             }
             // Jika sudah absen masuk, cek apakah terlambat
-            elseif ($attendance->jam_masuk) {
-                $jam_masuk = Carbon::createFromFormat('H:i:s', $attendance->jam_masuk);
-                if ($jam_masuk->gt(Carbon::createFromTime(7, 15, 0)) && $attendance->status == 'Hadir') {
+            elseif ($attendance->check_in) {
+                $check_in = Carbon::createFromFormat('H:i:s', $attendance->check_in);
+                if ($check_in->gt(Carbon::createFromTime(7, 15, 0)) && $attendance->status == 'Hadir') {
                     $attendance->status = 'Terlambat';
                     $attendance->save();
                 }

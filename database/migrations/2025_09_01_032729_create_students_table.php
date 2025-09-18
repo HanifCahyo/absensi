@@ -18,8 +18,6 @@ return new class extends Migration {
                 ->nullable() // wajib kalau mau pakai onDelete('set null')
                 ->constrained('classes')
                 ->nullOnDelete(); // cara lebih rapi dari onDelete('set null')
-            $table->string('address')->nullable();
-            $table->string('phone', 20)->nullable();
             $table->string('parent_contact', 20)->nullable();
             $table->string('qr_code_path')->nullable(); // Path file gambar QR Code
             $table->timestamps();

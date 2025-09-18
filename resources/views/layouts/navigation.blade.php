@@ -30,13 +30,25 @@
                         <x-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.dashboard')">
                             {{ __('Dashboard') }}
                         </x-nav-link>
+                        <x-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.index')">
+                            {{ __('Manajemen User') }}
+                        </x-nav-link>
+                        <x-nav-link :href="route('admin.classes.index')" :active="request()->routeIs('admin.classes.index')">
+                            {{ __('Kelas') }}
+                        </x-nav-link>
                     @elseif (Auth::user()->role == 'guru')
                         <x-nav-link :href="route('guru.dashboard')" :active="request()->routeIs('guru.dashboard')">
                             {{ __('Dashboard') }}
                         </x-nav-link>
+                        <x-nav-link :href="route('guru.attendances')" :active="request()->routeIs('guru.attendances')">
+                            {{ __('Absensi') }}
+                        </x-nav-link>
                     @elseif (Auth::user()->role == 'siswa')
                         <x-nav-link :href="route('siswa.dashboard')" :active="request()->routeIs('siswa.dashboard')">
                             {{ __('Dashboard') }}
+                        </x-nav-link>
+                        <x-nav-link :href="route('siswa.attendances')" :active="request()->routeIs('siswa.attendances')">
+                            {{ __('Absensi') }}
                         </x-nav-link>
                     @endif
                 </div>

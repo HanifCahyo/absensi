@@ -18,10 +18,6 @@ class StudentSeeder extends Seeder
     {
         // Ambil class yang sudah ada
         $class10A = ClassModel::where('name', '10A')->first();
-        // $class10B = ClassModel::where('name', '10B')->first();
-        // $class11A = ClassModel::where('name', '11A')->first();
-        // $class11B = ClassModel::where('name', '11B')->first();
-        // $class12A = ClassModel::where('name', '12A')->first();
 
         $user_id = User::where('role', 'siswa')->first()->id;
 

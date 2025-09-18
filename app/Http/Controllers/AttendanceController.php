@@ -5,19 +5,26 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Student;
 use App\Models\Attendance;
+use App\Models\Teacher;
 use Carbon\Carbon;
 
 class AttendanceController extends Controller
 {
+    // Tampilkan halaman scan QR
+    public function scanPage()
+    {
+        return view('attendance.scan');
+    }
+
     // Proses scan QR untuk absensi
     public function scan(Request $request)
     {
-        // Data NISN dikirim dari hasil scan QR
-        $nisn = $request->input('nisn');
+        // Data NIS dikirim dari hasil scan QR
+        $nis = $request->input('nis');
         $izin = $request->input('izin');
 
-        // Cari siswa berdasarkan NISN
-        $student = Student::where('nisn', $nisn)->first();
+        // Cari siswa berdasarkan NIS dengan relasi ke user
+        $student = Student::with('user')->where('nis', $nis)->first();
         if (!$student) {
             return response()->json([
                 'status' => 'error',
@@ -30,7 +37,7 @@ class AttendanceController extends Controller
 
         // Cek absensi hari ini
         $attendance = Attendance::where('student_id', $student->id)
-            ->whereDate('tanggal', $today)
+            ->whereDate('date', $today)
             ->first();
 
         // Jika ada izin
@@ -39,21 +46,27 @@ class AttendanceController extends Controller
                 return response()->json([
                     'status' => 'warning',
                     'message' => 'Absensi sudah tercatat hari ini',
-                    'student' => $student,
+                    'student' => [
+                        'nis' => $student->nis,
+                        'name' => $student->user->name
+                    ],
                 ]);
             }
             $attendance = Attendance::create([
                 'student_id' => $student->id,
-                'tanggal' => $today,
+                'date' => $today,
                 'status' => 'Izin',
-                'keterangan' => $izin,
-                'jam_masuk' => null,
-                'jam_keluar' => null,
+                'reason' => $izin,
+                'check_in' => null,
+                'check_out' => null,
             ]);
             return response()->json([
                 'status' => 'success',
                 'message' => 'Absensi izin berhasil dicatat',
-                'student' => $student,
+                'student' => [
+                    'nis' => $student->nis,
+                    'name' => $student->user->name
+                ],
                 'attendance' => $attendance
             ]);
         }
@@ -62,31 +75,37 @@ class AttendanceController extends Controller
         if ($attendance) {
             // Jika status Alpha, update jadi masuk
             if ($attendance->status == 'Alpha') {
-                $jam_masuk = $now->toTimeString();
+                $check_in = $now->toTimeString();
                 $status = $now->gt(Carbon::createFromTime(7, 15, 0)) ? 'Terlambat' : 'Hadir';
 
-                $attendance->jam_masuk = $jam_masuk;
-                $attendance->status = $status;
-                $attendance->keterangan = null;
-                $attendance->save();
+                $attendance->update([
+                    'check_in' => $check_in,
+                    'status' => $status,
+                    'reason' => null
+                ]);
 
                 return response()->json([
                     'status' => 'success',
                     'message' => 'Absensi masuk berhasil dicatat',
-                    'student' => $student,
+                    'student' => [
+                        'nis' => $student->nis,
+                        'name' => $student->user->name
+                    ],
                     'attendance' => $attendance
                 ]);
             }
 
             // Jika sudah absen masuk dan jam_keluar belum diisi, isi jam_keluar
-            if (!$attendance->jam_keluar) {
-                $attendance->jam_keluar = $now->toTimeString();
-                $attendance->save();
+            if ($attendance->check_in && !$attendance->check_out) {
+                $attendance->update(['check_out' => $now->toTimeString()]);
 
                 return response()->json([
                     'status' => 'success',
                     'message' => 'Absensi pulang dicatat',
-                    'student' => $student,
+                    'student' => [
+                        'nis' => $student->nis,
+                        'name' => $student->user->name
+                    ],
                     'attendance' => $attendance
                 ]);
             }
@@ -95,77 +114,127 @@ class AttendanceController extends Controller
             return response()->json([
                 'status' => 'warning',
                 'message' => 'Siswa sudah absen pulang hari ini',
-                'student' => $student,
+                'student' => [
+                    'nis' => $student->nis,
+                    'name' => $student->user->name
+                ],
                 'attendance' => $attendance
             ]);
         }
 
-        // Jika belum ada absensi hari ini, catat jam masuk
-        if (!$attendance) {
-            // Cek terlambat (misal jam masuk maksimal 07:15)
-            $jam_masuk = $now->toTimeString();
-            $status = $now->gt(Carbon::createFromTime(7, 15, 0)) ? 'Terlambat' : 'Hadir';
+        // Jika belum ada absensi hari ini, catat jam masuk (ini seharusnya tidak terjadi karena command sudah membuat Alpha)
+        $check_in = $now->toTimeString();
+        $status = $now->gt(Carbon::createFromTime(7, 15, 0)) ? 'Terlambat' : 'Hadir';
 
-            $attendance = Attendance::create([
-                'student_id' => $student->id,
-                'tanggal' => $today,
-                'jam_masuk' => $jam_masuk,
-                'status' => $status,
-            ]);
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Absensi masuk berhasil dicatat',
-                'student' => $student,
-                'attendance' => $attendance
-            ]);
+        $attendance = Attendance::create([
+            'student_id' => $student->id,
+            'date' => $today,
+            'check_in' => $check_in,
+            'status' => $status,
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Absensi masuk berhasil dicatat',
+            'student' => [
+                'nis' => $student->nis,
+                'name' => $student->user->name
+            ],
+            'attendance' => $attendance
+        ]);
+    }
+
+    // Halaman untuk Guru (web) — ambil murid & riwayat absensi mereka
+    public function teacherAttendancesPage(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user || $user->role !== 'guru') {
+            abort(403, 'Unauthorized');
         }
 
-        // // Jika sudah absen masuk, scan kedua = jam pulang
-        // if ($attendance->jam_keluar) {
-        //     return response()->json([
-        //         'status' => 'warning',
-        //         'message' => 'Siswa sudah absen pulang hari ini',
-        //         'student' => $student,
-        //         'attendance' => $attendance
-        //     ]);
-        // }
+        // ambil teacher record
+        $teacher = Teacher::where('user_id', $user->id)->firstOrFail();
 
-        // $attendance->jam_keluar = $now->toTimeString();
-        // $attendance->save();
+        // ambil kelas yang diampu (bisa satu atau lebih) lalu muridnya,
+        // eager load attendances (limit bisa ditambahkan jika perlu)
+        $students = Student::whereHas('class', function ($q) use ($teacher) {
+            $q->where('teacher_id', $teacher->id);
+        })
+            ->with([
+                'class',
+                'attendances' => function ($q) {
+                    $q->orderBy('date', 'desc');
+                }
+            ])
+            ->get();
 
-        // return response()->json([
-        //     'status' => 'success',
-        //     'message' => 'Absensi pulang dicatat',
-        //     'student' => $student,
-        //     'attendance' => $attendance
-        // ]);
+        // kirim ke view
+        return view('guru.attendances.view', [
+            'teacher' => $user,
+            'students' => $students,
+        ]);
+    }
 
-        // // Cek apakah siswa sudah absen hari ini
-        // $alreadyAttendance = Attendance::where('student_id', $student->id)
-        //     ->whereDate('tanggal', $today)
-        //     ->first();
+    public function teacherStudentDetail(Request $request, $id)
+    {
+        $user = $request->user();
+        if (!$user || $user->role !== 'guru') {
+            abort(403, 'Unauthorized');
+        }
 
-        // if ($alreadyAttendance) {
-        //     return response()->json([
-        //         'status' => 'warning',
-        //         'message' => 'Siswa sudah melakukan absensi hari ini',
-        //         'student' => $student
-        //     ]);
-        // }
+        $teacher = Teacher::where('user_id', $user->id)->firstOrFail();
 
-        // // Buat absensi baru
-        // $attendance = Attendance::create([
-        //     'student_id' => $student->id,
-        //     'tanggal' => $today,
-        //     'jam' => Carbon::now()->toTimeString(),
-        //     'status' => 'Hadir',
-        // ]);
+        // filter tanggal dari request
+        $from = $request->query('from');
+        $to = $request->query('to');
 
-        // return response()->json([
-        //     'status' => 'success',
-        //     'message' => 'Absensi berhasil dicatat',
-        //     'student' => $student,
-        //     'attendance' => $attendance
-        // ]);
+        $student = Student::where('id', $id)
+            ->whereHas('class', function ($q) use ($teacher) {
+                $q->where('teacher_id', $teacher->id);
+            })
+            ->with([
+                'class',
+                'attendances' => function ($q) use ($from, $to) {
+                    $q->orderBy('date', 'desc');
+                    if ($from) {
+                        $q->where('date', '>=', Carbon::parse($from));
+                    }
+                    if ($to) {
+                        $q->where('date', '<=', Carbon::parse($to));
+                    }
+                }
+            ])
+            ->firstOrFail();
+
+        return view('guru.attendances.detail', [
+            'student' => $student,
+            'from' => $from,
+            'to' => $to,
+        ]);
+    }
+
+    // Halaman untuk Siswa (web) — lihat absensi dirinya sendiri
+    public function studentAttendancesPage(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user || $user->role !== 'siswa') {
+            abort(403, 'Unauthorized');
+        }
+
+        $student = Student::where('user_id', $user->id)
+            ->with([
+                'class.teacher.user',
+                'attendances' => function ($q) {
+                    $q->orderBy('date', 'desc');
+                }
+            ])
+            ->firstOrFail();
+
+        return view('siswa.attendances.view', [
+            'student' => $student,
+            'user' => $user,
+        ]);
     }
 }
