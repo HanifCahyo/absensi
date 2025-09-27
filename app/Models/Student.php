@@ -12,9 +12,14 @@ class Student extends Model
     protected $fillable = [
         'user_id',
         'nis',
+        'nisn',
+        'date_of_birth',
         'class_id',
+        'religion',
         'parent_contact',
+        'major',
         'qr_code_path',
+        'barcode_path',
     ];
 
     public function user()

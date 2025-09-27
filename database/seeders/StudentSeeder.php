@@ -11,6 +11,7 @@ use BaconQrCode\Writer;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
+use Picqer\Barcode\BarcodeGeneratorSVG;
 
 class StudentSeeder extends Seeder
 {
@@ -25,6 +26,10 @@ class StudentSeeder extends Seeder
             [
                 'user_id' => $user_id,
                 'nis' => '1234567890',
+                'nisn' => '0987654321',
+                'date_of_birth' => 'Senin, 15 Mei 2008',
+                'religion' => 'Islam',
+                'major' => 'Science',
                 'class_id' => $class10A->id,
                 'parent_contact' => '08121234567',
             ],
@@ -33,21 +38,43 @@ class StudentSeeder extends Seeder
         foreach ($students as $s) {
             $student = Student::create($s);
 
-            // Render QR pakai GD (tanpa Imagick)
+            // Get user information for QR code
+            $user = User::find($student->user_id);
+
+            // 1. Generate BARCODE untuk NIS (hanya berisi NIS)
+            $barcodeGenerator = new BarcodeGeneratorSVG();
+            $barcodeSvg = $barcodeGenerator->getBarcode($student->nis, $barcodeGenerator::TYPE_CODE_128);
+
+            // Simpan file SVG Barcode
+            $barcodePath = 'barcodes/' . $student->nis . '.svg';
+            Storage::disk('public')->put($barcodePath, $barcodeSvg);
+
+            // 2. Generate QR CODE untuk informasi lengkap siswa
+            $qrData = json_encode([
+                'name' => $user->name,
+                'email' => $user->email,
+                'address' => $user->address,
+                'nis' => $student->nis,
+                'nisn' => $student->nisn,
+                'religion' => $student->religion,
+                'major' => $student->major,
+                'parent_contact' => $student->parent_contact,
+            ]);
             $renderer = new ImageRenderer(
-                new RendererStyle(200),
+                new RendererStyle(400),
                 new SvgImageBackEnd()
             );
             $writer = new Writer($renderer);
+            $qrCodeSvg = $writer->writeString($qrData);
 
-            $qrCode = $writer->writeString($student->nis);
+            $qrCodePath = 'qrcodes/' . $student->nis . '.svg';
+            Storage::disk('public')->put($qrCodePath, $qrCodeSvg);
 
-            // Simpan ke storage
-            $path = 'qrcodes/' . $student->nis . '.svg';
-            Storage::disk('public')->put($path, $qrCode);
-
-            // Update kolom qr_code_path
-            $student->update(['qr_code_path' => $path]);
+            // Update kedua kolom path
+            $student->update([
+                'barcode_path' => $barcodePath,
+                'qr_code_path' => $qrCodePath
+            ]);
         }
     }
 }

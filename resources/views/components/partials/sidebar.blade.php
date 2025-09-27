@@ -79,6 +79,24 @@
                     </li>
                 @endif
 
+                {{-- ROLE SATPAM --}}
+                @if (request()->is('satpam*'))
+                    <li class="nav-item">
+                        <a href="{{ route('satpam.dashboard') }}"
+                            class="nav-link {{ request()->routeIs('satpam.dashboard') ? 'active' : '' }}">
+                            <i class="nav-icon fas fa-th"></i>
+                            <p>Dashboard Satpam</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ route('satpam.attendance.scan.page') }}"
+                            class="nav-link {{ request()->routeIs('satpam.attendance.scan.page') ? 'active' : '' }}">
+                            <i class="nav-icon fas fa-check-square"></i>
+                            <p>Absensi</p>
+                        </a>
+                    </li>
+                @endif
+
                 <!-- Logout Menu -->
                 <li class="mt-auto nav-item">
                     <form method="POST" action="{{ route('logout') }}" class="p-0 nav-link">

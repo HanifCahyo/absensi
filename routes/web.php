@@ -10,8 +10,7 @@ Route::get('/', function () {
     return view('landing-page');
 });
 
-Route::get('/scan', [AttendanceController::class, 'scanPage'])->name('attendance.scan.page');
-Route::post('/attendance/scan', [AttendanceController::class, 'scan'])->name('attendance.scan');
+
 
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
     Route::get('/dashboard', function () {
@@ -61,6 +60,16 @@ Route::middleware(['auth', 'role:siswa'])->prefix('siswa')->group(function () {
 
     Route::get('/attendances', [AttendanceController::class, 'studentAttendancesPage'])
         ->name('siswa.attendances');
+});
+
+Route::middleware(['auth', 'role:satpam'])->prefix('satpam')->group(function () {
+    Route::get('/dashboard', function () {
+        return view('satpam.dashboard');
+    })->name('satpam.dashboard');
+
+
+    Route::get('/scan', [AttendanceController::class, 'scanPage'])->name('satpam.attendance.scan.page');
+    Route::post('/attendance/scan', [AttendanceController::class, 'scan'])->name('satpam.attendance.scan');
 });
 
 require __DIR__ . '/auth.php';

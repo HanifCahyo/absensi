@@ -56,10 +56,10 @@
             <!-- Call to Action -->
             <div class="relative z-10 p-8 bg-white shadow-xl rounded-2xl">
                 <h2 class="mb-4 text-2xl font-bold text-gray-800 md:text-3xl">
-                    Siap Memulai Bisnis Anda?
+                    Siap Memulai Sekolah Digital Anda?
                 </h2>
                 <p class="mb-8 text-lg text-gray-600">
-                    Masuk ke sistem dan nikmati kemudahan mengelola toko Anda
+                    Masuk ke sistem dan nikmati kemudahan mengelola Sistem Pembelajaran Anda
                 </p>
 
                 <!-- Login Button -->
@@ -72,12 +72,14 @@
                                     'admin' => 'admin.dashboard',
                                     'guru' => 'guru.dashboard',
                                     'siswa' => 'siswa.dashboard',
+                                    'satpam' => 'satpam.dashboard',
                                     default => 'dashboard',
                                 };
                                 $roleText = match ($user->role) {
                                     'admin' => 'Dashboard Admin',
                                     'guru' => 'Dashboard Guru',
                                     'siswa' => 'Dashboard Siswa',
+                                    'satpam' => 'Dashboard Satpam',
                                     default => 'Dashboard',
                                 };
                             @endphp
@@ -107,7 +109,7 @@
             <!-- Additional Info -->
             <div class="mt-12 text-center">
                 <p class="text-sm text-gray-500">
-                    © {{ date('Y') }} Point of Sales. Sistem manajemen toko yang mudah dan terpercaya.
+                    © {{ date('Y') }} Absensi. Sistem manajemen absensi sekolah yang mudah dan terpercaya.
                 </p>
             </div>
         </div>

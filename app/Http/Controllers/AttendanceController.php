@@ -13,7 +13,7 @@ class AttendanceController extends Controller
     // Tampilkan halaman scan QR
     public function scanPage()
     {
-        return view('attendance.scan');
+        return view('satpam.attendance.scan');
     }
 
     // Proses scan QR untuk absensi
@@ -34,54 +34,24 @@ class AttendanceController extends Controller
 
         $today = Carbon::today()->toDateString();
         $now = Carbon::now();
+        $cutoffTime = Carbon::createFromTime(7, 15, 0);
 
         // Cek absensi hari ini
         $attendance = Attendance::where('student_id', $student->id)
             ->whereDate('date', $today)
             ->first();
 
-        // Jika ada izin
-        if ($izin) {
-            if ($attendance) {
-                return response()->json([
-                    'status' => 'warning',
-                    'message' => 'Absensi sudah tercatat hari ini',
-                    'student' => [
-                        'nis' => $student->nis,
-                        'name' => $student->user->name
-                    ],
-                ]);
-            }
-            $attendance = Attendance::create([
-                'student_id' => $student->id,
-                'date' => $today,
-                'status' => 'Izin',
-                'reason' => $izin,
-                'check_in' => null,
-                'check_out' => null,
-            ]);
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Absensi izin berhasil dicatat',
-                'student' => [
-                    'nis' => $student->nis,
-                    'name' => $student->user->name
-                ],
-                'attendance' => $attendance
-            ]);
-        }
-
         // Jika sudah ada absensi hari ini
         if ($attendance) {
             // Jika status Alpha, update jadi masuk
             if ($attendance->status == 'Alpha') {
                 $check_in = $now->toTimeString();
-                $status = $now->gt(Carbon::createFromTime(7, 15, 0)) ? 'Terlambat' : 'Hadir';
+                $status = $now->gt($cutoffTime) ? 'Terlambat' : 'Hadir';
 
                 $attendance->update([
                     'check_in' => $check_in,
                     'status' => $status,
-                    'reason' => null
+                    'reason' => $status === 'Terlambat' ? 'Datang terlambat' : null,
                 ]);
 
                 return response()->json([
@@ -91,46 +61,50 @@ class AttendanceController extends Controller
                         'nis' => $student->nis,
                         'name' => $student->user->name
                     ],
-                    'attendance' => $attendance
+                    'attendance' => $attendance,
                 ]);
             }
 
-            // Jika sudah absen masuk dan jam_keluar belum diisi, isi jam_keluar
-            if ($attendance->check_in && !$attendance->check_out) {
-                $attendance->update(['check_out' => $now->toTimeString()]);
+            // Jika sudah check-in tapi belum check-out, isi column check-out
+            if ($attendance->check_in && !$attendance->check_out && in_array($attendance->status, ['Hadir', 'Terlambat'])) {
+                $attendance->update([
+                    'check_out' => $now->toTimeString(),
+                ]);
 
                 return response()->json([
                     'status' => 'success',
-                    'message' => 'Absensi pulang dicatat',
+                    'message' => 'Absensi pulang berhasil dicatat',
                     'student' => [
                         'nis' => $student->nis,
                         'name' => $student->user->name
                     ],
-                    'attendance' => $attendance
+                    'attendance' => $attendance,
                 ]);
             }
 
-            // Jika sudah absen masuk dan pulang
+
+            // Jika sudah check-in dan check-out, atau status Izin
             return response()->json([
                 'status' => 'warning',
-                'message' => 'Siswa sudah absen pulang hari ini',
+                'message' => 'Absensi sudah tercatat hari ini',
                 'student' => [
                     'nis' => $student->nis,
                     'name' => $student->user->name
                 ],
-                'attendance' => $attendance
+                'attendance' => $attendance,
             ]);
         }
 
-        // Jika belum ada absensi hari ini, catat jam masuk (ini seharusnya tidak terjadi karena command sudah membuat Alpha)
+        // Buat absensi baru
         $check_in = $now->toTimeString();
-        $status = $now->gt(Carbon::createFromTime(7, 15, 0)) ? 'Terlambat' : 'Hadir';
+        $status = $now->gt($cutoffTime) ? 'Terlambat' : 'Hadir';
 
         $attendance = Attendance::create([
             'student_id' => $student->id,
             'date' => $today,
             'check_in' => $check_in,
             'status' => $status,
+            'reason' => $status === 'Terlambat' ? 'Datang terlambat' : null,
         ]);
 
         return response()->json([
@@ -141,6 +115,32 @@ class AttendanceController extends Controller
                 'name' => $student->user->name
             ],
             'attendance' => $attendance
+        ]);
+    }
+
+    // Proses input izin manual
+    public function setPermission(Request $request)
+    {
+        $nis = $request->input('nis');
+        $reason = $request->input('reason');
+
+        // Cari siswa
+        $student = Student::where('nis', $nis)->first();
+
+        // Set izin
+        $attendance = Attendance::updateOrCreate([
+            'student_id' => $student->id,
+            'date' => Carbon::today(),
+        ], [
+            'status' => 'Izin',
+            'reason' => $reason,
+            'check_in' => null,
+            'check_out' => null,
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Status izin berhasil dicatat',
         ]);
     }
 

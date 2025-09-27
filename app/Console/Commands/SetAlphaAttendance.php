@@ -14,7 +14,7 @@ class SetAlphaAttendance extends Command
      *
      * @var string
      */
-    protected $signature = 'app:set-alpha-attendance';
+    protected $signature = 'app:set-alpha-attendance {--date= : Target date (YYYY-MM-DD)}';
 
     /**
      * The console command description.
@@ -28,35 +28,47 @@ class SetAlphaAttendance extends Command
      */
     public function handle()
     {
-        $today = Carbon::today()->toDateString();
+        $targetDate = $this->option('date')
+            ? Carbon::parse($this->option('date'))->toDateString()
+            : Carbon::today()->toDateString();
+
+        $cutoffTime = Carbon::createFromTime(7, 15, 0);
+        $currentTime = Carbon::now();
+
+        // Hanya jalankan jika sudah lewat jam cutoff atau untuk tanggal masa lalu
+        if (Carbon::parse($targetDate)->isToday() && $currentTime->lt($cutoffTime)) {
+            $this->info('Masih belum lewat jam 07:15. Command dibatalkan.');
+            return;
+        }
 
         // Ambil semua siswa
         $students = Student::all();
+        $alphaCount = 0;
+        $processedCount = 0;
 
         foreach ($students as $student) {
-            // Cek absensi hari ini
+            // Cek absensi pada tanggal target
             $attendance = Attendance::where('student_id', $student->id)
-                ->whereDate('date', $today)
+                ->whereDate('date', $targetDate)
                 ->first();
 
-            // Jika belum absen sama sekali, buat Alpha
+            // Jika belum ada record absensi sama sekali, buat Alpha
             if (!$attendance) {
                 Attendance::create([
                     'student_id' => $student->id,
-                    'date' => $today,
+                    'date' => $targetDate,
                     'status' => 'Alpha',
                     'reason' => 'Tidak hadir tanpa keterangan',
+                    'check_in' => null,
+                    'check_out' => null,
                 ]);
+                $alphaCount++;
             }
-            // Jika sudah absen masuk, cek apakah terlambat
-            elseif ($attendance->check_in) {
-                $check_in = Carbon::createFromFormat('H:i:s', $attendance->check_in);
-                if ($check_in->gt(Carbon::createFromTime(7, 15, 0)) && $attendance->status == 'Hadir') {
-                    $attendance->status = 'Terlambat';
-                    $attendance->save();
-                }
-            }
+
+            $processedCount++;
         }
-        $this->info('Absensi Alpha dan Terlambat telah diperbarui.');
+
+        $this->info("Processed {$processedCount} students for date {$targetDate}");
+        $this->info("Created {$alphaCount} Alpha attendance records");
     }
 }

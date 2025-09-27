@@ -20,6 +20,10 @@
                         <a href="{{ route('siswa.dashboard') }}">
                             <x-application-logo class="block w-auto text-gray-800 fill-current h-9" />
                         </a>
+                    @elseif (Auth::user()->role == 'satpam')
+                        <a href="{{ route('satpam.dashboard') }}">
+                            <x-application-logo class="block w-auto text-gray-800 fill-current h-9" />
+                        </a>
                     @endif
                 </div>
 
@@ -50,7 +54,15 @@
                         <x-nav-link :href="route('siswa.attendances')" :active="request()->routeIs('siswa.attendances')">
                             {{ __('Absensi') }}
                         </x-nav-link>
+                    @elseif (Auth::user()->role == 'satpam')
+                        <x-nav-link :href="route('satpam.dashboard')" :active="request()->routeIs('satpam.dashboard')">
+                            {{ __('Dashboard') }}
+                        </x-nav-link>
+                        <x-nav-link :href="route('satpam.attendances')" :active="request()->routeIs('satpam.attendances.scan.page')">
+                            {{ __('Absensi') }}
+                        </x-nav-link>
                     @endif
+
                 </div>
             </div>
 
@@ -119,6 +131,10 @@
                 </x-responsive-nav-link:href=>
             @elseif (Auth::user()->role == 'siswa')
                 <x-responsive-nav-link :href="route('siswa.dashboard')" :active="request()->routeIs('siswa.dashboard')">
+                    {{ __('Dashboard') }}
+                </x-responsive-nav-link>
+            @elseif (Auth::user()->role == 'satpam')
+                <x-responsive-nav-link :href="route('satpam.dashboard')" :active="request()->routeIs('satpam.dashboard')">
                     {{ __('Dashboard') }}
                 </x-responsive-nav-link>
             @endif

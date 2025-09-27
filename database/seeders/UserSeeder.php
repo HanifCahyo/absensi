@@ -57,6 +57,14 @@ class UserSeeder extends Seeder
                 'phone' => '08129876543',
                 'address' => 'Jl. Merdeka No. 10',
             ],
+            [
+                'name' => 'Satpam Sekolah',
+                'email' => 'satpam@school.com',
+                'password' => Hash::make('password'),
+                'role' => 'satpam',
+                'phone' => '08129876544',
+                'address' => 'Jl. Merdeka No. 11',
+            ],
         ];
 
         foreach ($users as $user) {

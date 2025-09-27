@@ -35,6 +35,8 @@ class AuthenticatedSessionController extends Controller
             return redirect()->intended(route('guru.dashboard'));
         } elseif ($user->role == 'siswa') {
             return redirect()->intended(route('siswa.dashboard'));
+        } elseif ($user->role == 'satpam') {
+            return redirect()->intended(route('satpam.dashboard'));
         } else {
             Auth::logout();
             return redirect()->route('login')->withErrors(['role' => 'Invalid user role.']);
